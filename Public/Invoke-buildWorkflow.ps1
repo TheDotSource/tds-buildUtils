@@ -18,6 +18,12 @@
     .PARAMETER credentialKeyFile
         The AES key used to decrypt credential objects in the credential store.
 
+    .PARAMETER logpath
+        Path to save build logs to.
+
+    .PARAMETER overrides
+        Optional values CSV. These values will override the mandatory values in the value table.
+
     .PARAMETER skipValidation
         Skip metadata and media validation (not recommended)
 
@@ -51,6 +57,10 @@
         [String]$credentialStore,
         [Parameter(Mandatory=$true,ValueFromPipeline=$false)]
         [String]$credentialKeyFile,
+        [Parameter(Mandatory=$true,ValueFromPipeline=$false)]
+        [String]$logPath,
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false)]
+        [String]$overrides,
         [Parameter(Mandatory=$false,ValueFromPipeline=$false)]
         [switch]$skipMediaValidation
     )
@@ -69,6 +79,9 @@
         ## Strip trailing \ from credential store path, if specified
         $credentialStore = $credentialStore.Trim("\")
 
+        ## Strip trailing \ from log path, if specified
+        $logPath = $logPath.Trim("\")
+
         ## Derive build name from path
         $buildName = Split-Path -Path $buildPath -Leaf
 
@@ -81,7 +94,7 @@
         Write-Verbose ("Build path found.")
 
         ## Initiate logs
-        $masterLogPath = ($buildPath + "\" + (Get-Date -Format "yyyy-MM-dd-HH-mm-ss") + "-log")
+        $masterLogPath = ($logPath + "\" + (Get-Date -Format "yyyy-MM-dd-HH-mm-ss") + "-" + $buildName + "-log")
 
         try {
             New-Item -ItemType Directory -Path $masterLogPath -Force | Out-Null
@@ -96,12 +109,13 @@
         ## Generate build values table
         Write-Verbose ("Generating build values table.")
         try {
-            $buildValues = Get-buildValues -buildPath $buildPath -dmlCSV $dmlCSV -credentialStore $credentialStore -credentialKeyFile $credentialKeyFile -skipMediaValidation:$skipMediaValidation -logPath $masterLogPath -ErrorAction Stop
+            $buildValues = Get-buildValues -buildPath $buildPath -dmlCSV $dmlCSV -credentialStore $credentialStore -credentialKeyFile $credentialKeyFile `
+            -skipMediaValidation:$skipMediaValidation -logPath $masterLogPath -overrides $overrides -ErrorAction Stop
             Write-Verbose ("Build values generated.")
         } # try
         catch {
             Write-Debug ("Failed to generate build values.")
-            throw ("Failed to generate build values. Get-buildValues returned: " + $_exception.message)
+            throw ("Failed to generate build values. Get-buildValues returned: " + $_.exception.message)
         } # catch
 
 

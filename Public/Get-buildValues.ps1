@@ -67,6 +67,8 @@ function Get-buildValues {
         [Parameter(Mandatory=$true,ValueFromPipeline=$false)]
         [String]$logPath,
         [Parameter(Mandatory=$false,ValueFromPipeline=$false)]
+        [String]$overrides,
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false)]
         [switch]$skipMediaValidation
     )
 
@@ -102,7 +104,23 @@ function Get-buildValues {
             throw("No content found within values.csv.")
         } # if
 
+        ## Add any supplied overrides
+        if ($overrides) {
+            Write-Verbose ("Override values have been specified.")
 
+            try {
+                $overrideValues = Import-Csv -Path $overrides -ErrorAction Stop
+                Write-Verbose ("Opened override CSV at " + $overrides)
+            } # try
+            catch {
+                Write-Debug ("Failed to import overrides.")
+                throw ("Failed to import overrides from " + $overrides + ". " + $_.exception.message)
+            } # catch   
+
+            ## Merge and overwrite these with main values table
+            $buildValues = ($buildValues | Where-Object {$_.key -notin $overrideValues.key}) + $overrideValues
+        } # if
+  
         ## Import DML from CSV
         Write-Verbose ("Importing DML index CSV.")
 
