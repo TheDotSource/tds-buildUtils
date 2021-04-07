@@ -122,6 +122,9 @@
         ## Add log directory to values table to make it available to other functions.
         $buildValues += [pscustomobject]@{"Key" = "logDirectory"; "Value" = $masterLogPath; "DataType" = "String"; "Description" = "Environment master log directory"}
 
+        ## Add AES key to values table to make it available to other functions.
+        $buildValues += [pscustomobject]@{"Key" = "credentialKeyFile"; "Value" = $credentialKeyFile; "DataType" = "String"; "Description" = "AES key for credentail objects"}
+
 
         ## Save a copy of this values table to the logs directory for reference
         Write-Verbose ("Exporting values table to " + $masterLogPath + "\translatedValues.csv")
@@ -188,13 +191,13 @@
             ## Build collection of hashtables so we can splat parameters
             $paramHashTables = @()
 
+            ## Initialise attribute name flag
+            $attribNames = @()
+
             foreach ($obj in $stage.Objects) {
 
                 ## Initilaise empty hashtable
                 $paramHashTable = @{}
-
-                ## Initialise attribute name flag
-                $attribName = $null
 
                 ## Define foreach process block
                 $feProcess = {
@@ -202,35 +205,26 @@
                     ## Process parameters
                     switch ($_) {
 
-                        {$_.name -like "*credential"} {
-
-                            ## This is a credential item. Build this from the credential store.
-                            #$paramHashTable[$_.Name] = Import-Credential -inputFile ($credentialStore + "\" + $_.value) -aesKey $credentialKeyFile
-                            $paramHashTable[$_.Name] = Import-Credential -inputFile $_.value -aesKey $credentialKeyFile
-                            Write-Verbose ("Injected credential object from " + $_.value)
-                            break
-                        } # Credential
-
+                        ## Generate workflow attribute. This is not a parameter, but an instruction to capture the output of this function to the specified attribute name.
                         {$_.name -eq "workflowAttrib"} {
 
-                            ## Workflow attribute. This is not a parameter, but an instruction to capture the output of this function to the specified attribute name.
                             Write-Verbose ("Workflow attribute detected. Output from this function will be captured to workflow attribute " + $_.value)
-                            $attribName = $_.value
+                            $attribNames += $_.value
                             break
-                        } # Workflow attribute
+                        } # Generate attribute
 
+                        ## Workflow attribute, use a value from the attributes table
+                        {$_.value -like "@@*"} {
+
+                            Write-Verbose ("Value for parameter " + $_.name + " will be taken from workflow attribute with key " + $_.value.trim("@@"))
+                            $paramHashTable[$_.Name] = $workFlowAttribs.($_.value.trim("@@"))
+                            break
+                        } # Use attribute
+
+                        ## All other standard values taken from values table
                         default {
 
-                            ## Standard function parameter. Translate if this is a workflow attribute
-                            if ($_.value -like "@@*") {
-
-                                Write-Verbose ("Value for paramter " + $_.name + " will be taken from workflow attribute.")
-                                $paramHashTable[$_.Name] = $workFlowAttribs.($_.value.trim("@@"))
-                            } # if
-                            else {
-                                $paramHashTable[$_.Name] = $_.value
-                            } # else
-
+                            $paramHashTable[$_.Name] = $_.value
                         } # default
 
                     } # switch
@@ -259,7 +253,7 @@
 
             try {
                 ## Execute script block
-                $cmdReturn = Invoke-Command -ScriptBlock $scriptBlock -ErrorAction Stop
+                $cmdReturns = Invoke-Command -ScriptBlock $scriptBlock -ErrorAction Stop
             } # try
             catch {
                 Write-Debug ("Command failure.")
@@ -267,25 +261,37 @@
                 throw ("A build failure was detected. Examine " + $buildLog + " for more details.")
             } # catch
 
-            ## If we have a workflowAttrib paramter set, save the output of this function to the specified workflow attribute
-            if ($attribName) {
+            ## If we have a workflowAttrib parameter set, save the output of this function to the specified workflow attribute
+            if ($attribNames) {
 
                 ## Check there was actual output
-                if ($cmdReturn) {
-                    Write-Verbose ("Saving function output to workflow attribute " + $attribName)
+                if ($cmdReturns) {
 
-                    ## Check if this attribute already exists, if so update it
-                    if ($workflowAttribs.$attribName) {
-                        Write-Verbose ("Workflow attribute already exists, it will be updated.")
-                        $workflowAttribs.$attribName = $cmdReturn
-                    } # if
-                    else {
-                        $workFlowAttribs.add($attribName,$cmdReturn)
-                    } # else
+                    ## Set counter, we use this to match an attribute name to a cmd return as they are in different arrays
+                    $x = 0
+
+                    foreach ($cmdReturn in $cmdReturns) {
+
+                        ## Fetch the attribName for this cmdreturn
+                        $attribName = $attribNames[$x]
+
+                        ## Check if this attribute already exists, if so update it
+                        if ($workflowAttribs.$attribName) {
+                            Write-Verbose ("Workflow attribute already exists, it will be updated.")
+                            $workflowAttribs.$attribName = $cmdReturn
+                        } # if
+                        else {
+                            Write-Verbose ("Saving function output to workflow attribute " + $attribName)
+                            $workFlowAttribs.add($attribName,$cmdReturn)
+                        } # else
+
+                        ## Increment counter
+                        $x++
+                    }
 
                 } # if
                 else {
-                    Write-Warning ("The workflowAttrib paramter was specified for this function, but it returned no ouput. This may affect other functions with a dependency on this attribute.")
+                    Write-Warning ("The workflowAttrib parameter was specified for this function, but it returned no ouput. This may affect other functions with a dependency on this attribute.")
                 } # else
 
             } # if
