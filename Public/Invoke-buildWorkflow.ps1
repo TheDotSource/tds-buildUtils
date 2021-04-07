@@ -60,7 +60,7 @@
         [Parameter(Mandatory=$true,ValueFromPipeline=$false)]
         [String]$logPath,
         [Parameter(Mandatory=$false,ValueFromPipeline=$false)]
-        [String]$overrides,
+        [String[]]$overrides,
         [Parameter(Mandatory=$false,ValueFromPipeline=$false)]
         [switch]$skipMediaValidation
     )
