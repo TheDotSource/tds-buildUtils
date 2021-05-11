@@ -93,8 +93,10 @@
 
         Write-Verbose ("Build path found.")
 
-        ## Initiate logs
+        ## Initiate logs and scratch directory
         $masterLogPath = ($logPath + "\" + (Get-Date -Format "yyyy-MM-dd-HH-mm-ss") + "-" + $buildName + "-log")
+        $scratchPath = ($logPath + "\" + (Get-Date -Format "yyyy-MM-dd-HH-mm-ss") + "-" + $buildName + "-scratch")
+
 
         try {
             New-Item -ItemType Directory -Path $masterLogPath -Force | Out-Null
@@ -119,8 +121,9 @@
         } # catch
 
 
-        ## Add log directory to values table to make it available to other functions.
-        $buildValues += [pscustomobject]@{"Key" = "logDirectory"; "Value" = $masterLogPath; "DataType" = "String"; "Description" = "Environment master log directory"}
+        ## Add log and scratch directories to values table to make it available to other functions.
+        $buildValues += [pscustomobject]@{"Key" = "logDirectory"; "Value" = $masterLogPath; "DataType" = "String"; "Description" = "Environment log directory"}
+        $buildValues += [pscustomobject]@{"Key" = "scratchDirectory"; "Value" = $scratchPath; "DataType" = "String"; "Description" = "Environment scratch directory"}
 
         ## Add AES key to values table to make it available to other functions.
         $buildValues += [pscustomobject]@{"Key" = "credentialKeyFile"; "Value" = $credentialKeyFile; "DataType" = "String"; "Description" = "AES key for credentail objects"}
