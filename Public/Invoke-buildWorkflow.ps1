@@ -261,6 +261,18 @@
             catch {
                 Write-Debug ("Command failure.")
                 $_ | Write-BuildLog -logPath $buildLog -functionName $stage.function
+
+                ## Build failed, clean up scratch directory before throwing
+                Write-Verbose ("Removing scratch directory " + $scratchPath)
+
+                try {
+                    Remove-Item -Path $scratchPath -Confirm:$false -Recurse -Force
+                    Write-Verbose ("Removed.")
+                } # try
+                catch {
+                    Write-Warning ("Failed to remove scratch directory. " + $_.exception.message)
+                } # catch
+
                 throw ("A build failure was detected. Examine " + $buildLog + " for more details.")
             } # catch
 
@@ -303,6 +315,18 @@
             Start-Sleep 2
 
         } # foreach
+
+
+        ## Remove scratch path
+        Write-Verbose ("Removing scratch directory " + $scratchPath)
+        try {
+            Remove-Item -Path $scratchPath -Confirm:$false -Recurse -Force
+            Write-Verbose ("Removed.")
+        } # try
+        catch {
+            Write-Warning ("Failed to remove scratch directory. " + $_.exception.message)
+        } # catch
+
 
         Write-Verbose ("Build complete.")
 
