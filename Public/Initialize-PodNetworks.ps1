@@ -98,8 +98,8 @@ function Initialize-PodNetworks {
         Write-Verbose ("Configuring Pod portgroups.")
 
         try {
-            $pg01 = (Get-VDPortGroup -Name MTU1500 -ErrorAction SilentlyContinue) ?? ($vds01 | New-VDPortgroup -Name MTU1500 -ErrorAction Stop)
-            $pg02 = (Get-VDPortGroup -Name MTU9000 -ErrorAction SilentlyContinue) ?? ($vds02 | New-VDPortgroup -Name MTU9000 -ErrorAction Stop)
+            $pg01 = (Get-VDPortGroup -Name POD-PG01 -ErrorAction SilentlyContinue) ?? ($vds01 | New-VDPortgroup -Name POD-PG01 -ErrorAction Stop)
+            $pg02 = (Get-VDPortGroup -Name POD-PG02 -ErrorAction SilentlyContinue) ?? ($vds02 | New-VDPortgroup -Name POD-PG02 -ErrorAction Stop)
 
             Write-Verbose ("Podium portgroups configured.")
         } # try
