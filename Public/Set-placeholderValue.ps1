@@ -40,11 +40,8 @@
 
     )
 
-
     begin {
-
         Write-Verbose ("Function start.")
-
     } # begin
 
     process {
@@ -71,45 +68,37 @@
         $newJSON = @()
 
         ## Iterate through each row and replace placeholders with values
-        $i = 1
+        $i = 0
+
+        ## Set regex to catch value from tags
+        $tagPattern =  '(?<=\<@@>).+?(?=\</@@>)'
 
         foreach ($row in $json) {
 
             Write-Verbose ("Processing row number " + $i)
 
-            ## Set regex to catch value from tags
-            $tagPattern =  '(?i)<@@[^>]*>(.*)</@@>'
+            $results = ([Regex]::Matches($row, $tagPattern) | Where-Object {$_.success}).value
 
+            foreach ($result in $results) {
 
-            ## Apply regex to get value from tag on this row
-            $result = [Regex]::Match($row, $tagPattern)
-
-
-            ## If a tag was found on this line, find metadata value
-            if ($result.Success) {
-
-                Write-Verbose ("Placeholder tag detected at row " + $i)
+                Write-Verbose ("Placeholder tag " + $result + " detected at row " + $i)
 
                 ## Tag has been found, retreive a value
-                $metaValue = ($buildValues | Where-Object {$_.key -eq $result.Groups[1].value}).value
+                $metaValue = ($buildValues | Where-Object {$_.key -eq $result}).value
 
                 Write-Verbose ("Value " + $metaValue + " will be injected.")
 
                 if ($metaValue) {
-                    Write-Verbose ("Metadata placeholder " + $result.Groups[1].value + " has been populated with value " + $metaValue)
+                    Write-Verbose ("Metadata placeholder " + $result + " has been populated with value " + $metaValue)
                 } # if
                 else {
-                    throw ("Placeholder " + $result.Groups[1].value + " from JSON file " + $jsonFile.FullName + " could not be found in values table.")
+                    throw ("Placeholder " + $result + " from JSON file " + $jsonFile.FullName + " could not be found in values table.")
                 } # else
 
                 ## Insert this value into the string
-                $row = $row -replace $result.Groups[0].value,$metaValue
+                $row = $row -replace ("<@@>" + $result + "</@@>"),$metaValue
 
-            } # if
-            else {
-                Write-Verbose ("No placeholder tag found at this row.")
-
-            } # else
+            } # foreach
 
             ## Append row to new JSON
             $newJSON += $row
@@ -126,7 +115,6 @@
             $jsonStage.Objects += $newJSON | ConvertFrom-Json -ErrorAction Stop
         } # try
         catch {
-            Write-Debug ("Failed to add stage object.")
             throw ("Failed to add stage object. The CMDlet returned: " + $_.exception.message)
         } # catch
 
@@ -136,11 +124,8 @@
 
     } # process
 
-
     end {
-
         Write-Verbose ("Function complete.")
     } # end
-
 
 } # function
