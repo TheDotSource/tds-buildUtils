@@ -72,8 +72,8 @@ function Initialize-PodNetworks {
         Write-Verbose ("Configuring Pod switches POD-DVS01 and POD-DVS02.")
 
         try {
-            $vds01 = (Get-VDSwitch -Name POD-DVS01 -ErrorAction SilentlyContinue) ?? (New-VDSwitch -Name POD-DVS01 -Location $datacenter.Name -ErrorAction Stop)
-            $vds02 = (Get-VDSwitch -Name POD-DVS02 -ErrorAction SilentlyContinue) ?? (New-VDSwitch -Name POD-DVS02 -Location $datacenter.Name -ErrorAction Stop)
+            $vds01 = (Get-VDSwitch -Name POD-DVS01 -ErrorAction SilentlyContinue) ?? (New-VDSwitch -Name POD-DVS01 -Location $datacenter.Name -Version 6.6.0 -ErrorAction Stop)
+            $vds02 = (Get-VDSwitch -Name POD-DVS02 -ErrorAction SilentlyContinue) ?? (New-VDSwitch -Name POD-DVS02 -Location $datacenter.Name -Version 6.6.0 -ErrorAction Stop)
 
             Write-Verbose ("Pod switches are configured for datacenter " + $datacenter.name)
         } # try
